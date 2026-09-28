@@ -1,50 +1,78 @@
-import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
+import type { ComponentProps } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  View,
+  type PressableProps,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { gradientStyle, Gradients, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'danger';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
-type Props = PressableProps & {
+type Props = Omit<PressableProps, 'style' | 'children'> & {
   variant?: Variant;
   label: string;
+  icon?: ComponentProps<typeof MaterialCommunityIcons>['name'];
   loading?: boolean;
   disabled?: boolean;
+  full?: boolean;
+  style?: PressableProps['style'];
 };
 
-export function Button({ variant = 'primary', label, loading, disabled, style, ...rest }: Props) {
+export function Button({
+  variant = 'primary',
+  label,
+  icon,
+  loading,
+  disabled,
+  full,
+  style,
+  ...rest
+}: Props) {
   const theme = useTheme();
+  const isPrimary = variant === 'primary';
 
-  const palette: Record<Variant, { bg: string; fg: string }> = {
+  const palette: Record<Variant, { bg: string; fg: string; border?: string }> = {
     primary: { bg: theme.tint, fg: theme.tintText },
-    secondary: { bg: theme.backgroundElement, fg: theme.text },
-    outline: { bg: 'transparent', fg: theme.tint },
+    secondary: { bg: theme.brandSurface, fg: theme.brandBright, border: theme.border },
+    outline: { bg: 'transparent', fg: theme.brandBright, border: theme.borderStrong },
+    ghost: { bg: 'transparent', fg: theme.textSecondary },
     danger: { bg: theme.danger, fg: theme.onDanger },
   };
 
-  const { bg, fg } = palette[variant];
-  const userStyle =
-    typeof style === 'function'
-      ? style({ pressed: false, hovered: false })
-      : style;
+  const { bg, fg, border } = palette[variant];
+  const userStyle = typeof style === 'function' ? style({ pressed: false, hovered: false }) : style;
+  const isInert = disabled || loading;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.base,
+        full && styles.full,
         { backgroundColor: bg },
-        variant === 'outline' && { borderColor: theme.tint, borderWidth: 1 },
-        (pressed || disabled || loading) && styles.dim,
-        disabled && styles.disabled,
+        border ? { borderColor: border, borderWidth: 1.5 } : null,
+        isPrimary && !isInert && Shadows.raised,
+        isPrimary && gradientStyle(Gradients.accent),
+        pressed && styles.pressed,
+        isInert && styles.inert,
         userStyle,
       ]}
-      disabled={disabled || loading}
+      disabled={isInert}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       {...rest}>
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <ThemedText style={[styles.label, { color: fg }]}>{label}</ThemedText>
+        <View style={styles.content}>
+          {icon ? <MaterialCommunityIcons name={icon} size={18} color={fg} /> : null}
+          <ThemedText style={[styles.label, { color: fg }]}>{label}</ThemedText>
+        </View>
       )}
     </Pressable>
   );
@@ -52,17 +80,22 @@ export function Button({ variant = 'primary', label, loading, disabled, style, .
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: Spacing.three,
-    paddingVertical: Spacing.three,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
     minHeight: 52,
   },
+  full: { alignSelf: 'stretch' },
+  content: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   label: {
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    textAlign: 'center',
   },
-  dim: { opacity: 0.6 },
-  disabled: { opacity: 0.4 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  inert: { opacity: 0.45 },
 });

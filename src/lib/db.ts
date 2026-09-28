@@ -10,6 +10,7 @@ import type {
   RoutineBlock,
   RoutineBlockExercise,
   RoutineSchedule,
+  StaffEntry,
   WorkoutSession,
 } from '@/types';
 
@@ -51,13 +52,48 @@ export async function updateProfileName(uid: string, name: string): Promise<void
   if (res.error) throw res.error;
 }
 
-export async function fetchAlumnos(): Promise<Profile[]> {
-  const res = await supabase.from('profiles').select('*').eq('role', 'cliente').order('name');
+/** Alumnos asignados al profe (nunca el directorio global). */
+export async function fetchAlumnos(profeId: string): Promise<Profile[]> {
+  const res = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'cliente')
+    .eq('profe_id', profeId)
+    .order('name');
   return dataOrThrow<Profile[]>(res);
+}
+
+/** Búsqueda por email para asignar un alumno nuevo (RPC, solo profe). */
+export async function searchClientsByEmail(query: string): Promise<Pick<Profile, 'id' | 'email' | 'name'>[]> {
+  const res = await supabase.rpc('search_clients_by_email', { query });
+  if (res.error) throw res.error;
+  return (res.data as Pick<Profile, 'id' | 'email' | 'name'>[]) ?? [];
 }
 
 export async function assignProfe(target: string): Promise<void> {
   const res = await supabase.rpc('assign_profe', { target });
+  if (res.error) throw res.error;
+}
+
+// ---------- Staff (allow-list de profes) ----------
+
+export async function fetchStaffAllowlist(): Promise<StaffEntry[]> {
+  const res = await supabase.rpc('list_staff_allowlist');
+  if (res.error) throw res.error;
+  return (res.data as StaffEntry[]) ?? [];
+}
+
+/** Habilita un email para registrarse como profe y promueve la cuenta si ya existe. */
+export async function grantStaffAccess(email: string, note?: string): Promise<void> {
+  const res = await supabase.rpc('grant_staff_access', {
+    target_email: email,
+    note: note?.trim() || null,
+  });
+  if (res.error) throw res.error;
+}
+
+export async function revokeStaffAccess(email: string): Promise<void> {
+  const res = await supabase.rpc('revoke_staff_access', { target_email: email });
   if (res.error) throw res.error;
 }
 

@@ -10,7 +10,8 @@ import { Screen } from '@/components/ui/screen';
 import { useSession } from '@/context/session';
 import { fetchProfile, updateProfileName, upsertClientDetails } from '@/lib/db';
 import { computeEdad, parseTags } from '@/lib/format';
-import { Spacing } from '@/constants/theme';
+import { gradientStyle, Gradients, Spacing, Radius, Shadows } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Experiencia, Profile } from '@/types';
 
 const EXPERIENCIAS: { value: Experiencia; label: string }[] = [
@@ -20,6 +21,7 @@ const EXPERIENCIAS: { value: Experiencia; label: string }[] = [
 ];
 
 export default function PerfilScreen() {
+  const theme = useTheme();
   const { session, profile, clientDetails, refreshProfile, signOut } = useSession();
 
   const [name, setName] = useState('');
@@ -58,6 +60,13 @@ export default function PerfilScreen() {
 
   const uid = session?.user?.id;
   const edad = computeEdad(clientDetails?.fecha_nacimiento ?? null);
+  const initials =
+    (profile?.name ?? '')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? '')
+      .join('') || '?';
 
   async function handleSave() {
     if (!uid) return;
@@ -89,16 +98,28 @@ export default function PerfilScreen() {
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Perfil</ThemedText>
+      <View style={styles.identity}>
+        <View style={[styles.avatar, { backgroundColor: theme.brand }, gradientStyle(Gradients.accent)]}>
+          <ThemedText type="subtitle" themeColor="tintText">
+            {initials}
+          </ThemedText>
+        </View>
+        <View style={styles.identityText}>
+          <ThemedText type="display" style={styles.identityName}>
+            {profile?.name ?? 'Tu perfil'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {profile?.role === 'profe' ? 'Profe' : 'Alumno'}
+            {profile?.email ? ` · ${profile.email}` : ''}
+          </ThemedText>
+        </View>
+      </View>
 
       <Card>
-        <ThemedText type="smallBold" themeColor="textSecondary">
+        <ThemedText type="eyebrow" themeColor="textSecondary">
           Datos de la cuenta
         </ThemedText>
         <Field label="Nombre" value={name} onChangeText={setName} />
-        <ThemedText type="small" themeColor="textSecondary">
-          {profile?.email} · {profile?.role === 'profe' ? 'Profe' : 'Alumno'}
-        </ThemedText>
         {profe ? (
           <ThemedText type="small" themeColor="textSecondary">
             Tu profe: <ThemedText type="smallBold">{profe.name ?? profe.email}</ThemedText>
@@ -107,7 +128,7 @@ export default function PerfilScreen() {
       </Card>
 
       <Card>
-        <ThemedText type="smallBold" themeColor="textSecondary">
+        <ThemedText type="eyebrow" themeColor="textSecondary">
           Tu información para la rutina
         </ThemedText>
         {edad != null ? (
@@ -148,31 +169,45 @@ export default function PerfilScreen() {
           onChangeText={setLesiones}
         />
 
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          Nivel de experiencia
-        </ThemedText>
-        <View style={styles.row}>
-          {EXPERIENCIAS.map((exp) => (
-            <Chip
-              key={exp.value}
-              label={exp.label}
-              selected={experiencia === exp.value}
-              onPress={() => setExperiencia(exp.value)}
-            />
-          ))}
+        <View style={styles.group}>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            Nivel de experiencia
+          </ThemedText>
+          <View style={styles.row}>
+            {EXPERIENCIAS.map((exp) => (
+              <Chip
+                key={exp.value}
+                label={exp.label}
+                selected={experiencia === exp.value}
+                onPress={() => setExperiencia(exp.value)}
+              />
+            ))}
+          </View>
         </View>
 
         {message ? <ThemedText themeColor="success">{message}</ThemedText> : null}
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label="Guardar cambios" onPress={handleSave} loading={saving} />
+        <Button label="Guardar cambios" icon="content-save-outline" onPress={handleSave} loading={saving} />
       </Card>
 
-      <Button variant="danger" label="Cerrar sesión" onPress={signOut} />
+      <Button variant="danger" label="Cerrar sesión" icon="logout" onPress={signOut} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  identity: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.card,
+  },
+  identityText: { flex: 1, gap: Spacing.one },
+  identityName: { fontSize: 26, lineHeight: 32 },
+  group: { gap: Spacing.md, paddingTop: Spacing.one },
   row: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
   half: { flex: 1, minWidth: 120 },
 });

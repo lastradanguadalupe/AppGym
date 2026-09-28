@@ -7,12 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Field } from '@/components/ui/field';
+import { IconAction } from '@/components/ui/icon-action';
 import { Screen } from '@/components/ui/screen';
 import { createExercise, deleteExercise, fetchExercises, fetchMuscleGroups, updateExercise } from '@/lib/db';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Exercise, MuscleGroup } from '@/types';
 
 export default function AdminEjerciciosScreen() {
+  const theme = useTheme();
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
   const [exercises, setExercises] = useState<(Exercise & { muscle_groups: MuscleGroup })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,15 +118,25 @@ export default function AdminEjerciciosScreen() {
   if (loading) {
     return (
       <Screen>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.brandBright} style={styles.loader} />
       </Screen>
     );
   }
 
   return (
     <Screen>
+      <View style={styles.header}>
+        <ThemedText type="eyebrow" themeColor="brandBright">
+          Catálogo
+        </ThemedText>
+        <ThemedText type="display">Ejercicios</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {exercises.length} ejercicios cargados, listos para armar rutinas.
+        </ThemedText>
+      </View>
+
       <Card>
-        <ThemedText type="smallBold" themeColor="textSecondary">
+        <ThemedText type="eyebrow" themeColor="textSecondary">
           Nuevo ejercicio
         </ThemedText>
         <Field label="Nombre" value={name} onChangeText={setName} placeholder="Ej: Press de banca" />
@@ -153,7 +166,7 @@ export default function AdminEjerciciosScreen() {
         </View>
         {message ? <ThemedText themeColor="success">{message}</ThemedText> : null}
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label="Guardar ejercicio" onPress={handleCreate} loading={busy} />
+        <Button label="Guardar ejercicio" icon="plus" onPress={handleCreate} loading={busy} />
       </Card>
 
       {muscleGroups.map((mg) => {
@@ -161,8 +174,8 @@ export default function AdminEjerciciosScreen() {
         if (!groupExercises.length) return null;
         return (
           <Card key={mg.id}>
-            <ThemedText type="smallBold" themeColor="tint">
-              {mg.name}
+            <ThemedText type="eyebrow" themeColor="brandBright">
+              {mg.name} · {groupExercises.length}
             </ThemedText>
             {groupExercises.map((ex) => (
               <View key={ex.id}>
@@ -176,17 +189,26 @@ export default function AdminEjerciciosScreen() {
                     ) : null}
                   </View>
                   {editingId === ex.id ? (
-                    <ThemedText type="small" themeColor="tint" onPress={() => setEditingId(null)}>
-                      Cerrar
-                    </ThemedText>
+                    <IconAction
+                      icon="close"
+                      label="Cerrar"
+                      color={theme.textSecondary}
+                      onPress={() => setEditingId(null)}
+                    />
                   ) : (
                     <>
-                      <ThemedText type="small" themeColor="tint" onPress={() => openEdit(ex)}>
-                        Editar
-                      </ThemedText>
-                      <ThemedText type="small" themeColor="danger" onPress={() => handleDelete(ex.id)}>
-                        Borrar
-                      </ThemedText>
+                      <IconAction
+                        icon="pencil-outline"
+                        label="Editar"
+                        color={theme.brandBright}
+                        onPress={() => openEdit(ex)}
+                      />
+                      <IconAction
+                        icon="trash-can-outline"
+                        label="Borrar"
+                        color={theme.danger}
+                        onPress={() => handleDelete(ex.id)}
+                      />
                     </>
                   )}
                 </View>
@@ -209,7 +231,13 @@ export default function AdminEjerciciosScreen() {
                       autoComplete="off"
                       placeholder="https://.../foto.png"
                     />
-                    <Button variant="outline" label="Guardar" disabled={busy} onPress={() => handleSaveEdit(ex.id)} />
+                    <Button
+                      variant="outline"
+                      label="Guardar"
+                      icon="content-save-outline"
+                      disabled={busy}
+                      onPress={() => handleSaveEdit(ex.id)}
+                    />
                   </View>
                 ) : null}
               </View>
@@ -222,6 +250,8 @@ export default function AdminEjerciciosScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { marginTop: Spacing.five },
+  header: { gap: Spacing.one },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.two },
   flex: { flex: 1 },

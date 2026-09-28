@@ -13,6 +13,13 @@ export interface Profile {
   updated_at: string;
 }
 
+/** Email habilitado para registrarse como profe. Solo la manages un profe. */
+export interface StaffEntry {
+  email: string;
+  note: string | null;
+  created_at: string;
+}
+
 export interface ClientDetails {
   id: number;
   user_id: string;

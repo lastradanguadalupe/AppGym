@@ -3,13 +3,14 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Card } from '@/components/ui/card';
+import { Card, StatCard } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty';
 import { Screen } from '@/components/ui/screen';
 import { useSession } from '@/context/session';
 import { fetchSessions } from '@/lib/db';
 import { formatDateTime, formatMinutes, regionLabel } from '@/lib/format';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { WorkoutSession } from '@/types';
 
 type SessionRow = WorkoutSession & {
@@ -18,6 +19,7 @@ type SessionRow = WorkoutSession & {
 
 export default function HistorialScreen() {
   const { session } = useSession();
+  const theme = useTheme();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +49,7 @@ export default function HistorialScreen() {
   if (loading) {
     return (
       <Screen>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.brandBright} style={styles.loader} />
       </Screen>
     );
   }
@@ -55,7 +57,9 @@ export default function HistorialScreen() {
   if (!sessions.length) {
     return (
       <Screen>
+        <ThemedText type="display">Historial</ThemedText>
         <EmptyState
+          icon="clock-outline"
           title="Todavía no entrenaste"
           subtitle="Cuando completes o finalices un entrenamiento, vas a ver tu historial acá."
         />
@@ -65,37 +69,39 @@ export default function HistorialScreen() {
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Historial</ThemedText>
+      <ThemedText type="display">Historial</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        Cada entrenamiento que completás queda registrado acá.
+      </ThemedText>
 
       <View style={styles.statsRow}>
-        <Card style={[styles.flex, styles.statCard]}>
-          <ThemedText type="title">{sessions.length}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Entrenamientos
-          </ThemedText>
-        </Card>
-        <Card style={[styles.flex, styles.statCard]}>
-          <ThemedText type="title">{formatMinutes(totalMinutes)}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Tiempo
-          </ThemedText>
-        </Card>
+        <StatCard icon="dumbbell" value={String(sessions.length)} label="Entrenamientos" />
+        <StatCard
+          icon="timer-outline"
+          value={formatMinutes(totalMinutes)}
+          label="Tiempo"
+          tint={theme.brandBright}
+        />
       </View>
 
       {sessions.map((s) => (
         <Card key={s.id} style={styles.sessionCard}>
           <View style={styles.sessionHeader}>
-            <ThemedText type="default">
-              {s.routine_blocks?.name ?? 'Entrenamiento'}
-            </ThemedText>
-            <ThemedText type="smallBold" themeColor="tint">
-              {s.duration_minutes != null ? formatMinutes(s.duration_minutes) : 'Completo'}
-            </ThemedText>
+            <View style={styles.flex}>
+              <ThemedText type="smallBold">
+                {s.routine_blocks?.name ?? 'Entrenamiento'}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {formatDateTime(s.completed_on)}
+                {s.routine_blocks ? ` · ${regionLabel(s.routine_blocks.region)}` : ''}
+              </ThemedText>
+            </View>
+            <View style={[styles.duration, { backgroundColor: theme.brandSurface }]}>
+              <ThemedText type="smallBold" themeColor="brandBright">
+                {s.duration_minutes != null ? formatMinutes(s.duration_minutes) : 'Completo'}
+              </ThemedText>
+            </View>
           </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {formatDateTime(s.completed_on)}
-            {s.routine_blocks ? ` · ${regionLabel(s.routine_blocks.region)}` : ''}
-          </ThemedText>
         </Card>
       ))}
 
@@ -109,10 +115,15 @@ export default function HistorialScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { marginTop: Spacing.five },
   statsRow: { flexDirection: 'row', gap: Spacing.two },
   flex: { flex: 1 },
-  statCard: { alignItems: 'center' },
-  sessionCard: { gap: Spacing.one },
-  sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sessionCard: { gap: Spacing.two },
+  sessionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  duration: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+  },
   totalNote: { textAlign: 'center' },
 });

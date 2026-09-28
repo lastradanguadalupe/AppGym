@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
@@ -19,7 +20,8 @@ import {
   type RoutineFull,
 } from '@/lib/db';
 import { WEEKDAYS_SHORT, regionLabel, weekdayLabel, weekdayOf } from '@/lib/format';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { RoutineBlock, RoutineSchedule, WorkoutSession } from '@/types';
 
 function isSameDay(iso: string, date: Date): boolean {
@@ -28,6 +30,7 @@ function isSameDay(iso: string, date: Date): boolean {
 
 export default function RutinaScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { session } = useSession();
   const workout = useWorkout();
 
@@ -109,7 +112,7 @@ export default function RutinaScreen() {
   if (loading) {
     return (
       <Screen>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.brandBright} style={styles.loader} />
       </Screen>
     );
   }
@@ -117,7 +120,9 @@ export default function RutinaScreen() {
   if (!routine || !routine.routine_blocks.length) {
     return (
       <Screen>
+        <ThemedText type="display">Tu rutina</ThemedText>
         <EmptyState
+          icon="clipboard-text-outline"
           title="Aún no tenés rutina"
           subtitle="Tu profe todavía no te asignó una rutina con bloques de entrenamiento."
         />
@@ -127,8 +132,8 @@ export default function RutinaScreen() {
 
   return (
     <Screen>
-      <View>
-        <ThemedText type="subtitle">{routine.title}</ThemedText>
+      <View style={styles.titleBlock}>
+        <ThemedText type="display">{routine.title}</ThemedText>
         {routine.description ? (
           <ThemedText type="small" themeColor="textSecondary">
             {routine.description}
@@ -138,7 +143,9 @@ export default function RutinaScreen() {
 
       {/* Resumen de la semana */}
       <Card>
-        <ThemedText type="smallBold">Tu semana</ThemedText>
+        <ThemedText type="eyebrow" themeColor="textSecondary">
+          Tu semana
+        </ThemedText>
         {Array.from({ length: 7 }, (_, weekday) => {
           const block = blockOfWeekday(weekday);
           return (
@@ -146,7 +153,7 @@ export default function RutinaScreen() {
               <ThemedText type="small" themeColor={block ? 'text' : 'textSecondary'} style={styles.weekDay}>
                 {weekdayLabel(weekday)}
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="small" themeColor={block ? 'brandBright' : 'textSecondary'}>
                 {block ? block.name : 'Descanso / libre'}
               </ThemedText>
             </View>
@@ -163,24 +170,26 @@ export default function RutinaScreen() {
         return (
           <Card key={block.id} style={styles.blockCard}>
             <View>
-              <ThemedText type="smallBold" themeColor="tint">
+              <ThemedText type="smallBold" themeColor="brandBright">
                 Bloque {index + 1} · {regionLabel(block.region)}
               </ThemedText>
               <ThemedText type="subtitle">{block.name}</ThemedText>
             </View>
 
-            <ThemedText type="smallBold" themeColor="textSecondary">
-              Día de la semana
-            </ThemedText>
-            <View style={styles.chipsRow}>
-              {WEEKDAYS_SHORT.map((label, weekday) => (
-                <Chip
-                  key={weekday}
-                  label={label}
-                  selected={scheduledWeekdayOf(block.id) === weekday}
-                  onPress={() => handleSetDay(block, weekday)}
-                />
-              ))}
+            <View style={styles.group}>
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                Día de la semana
+              </ThemedText>
+              <View style={styles.chipsRow}>
+                {WEEKDAYS_SHORT.map((label, weekday) => (
+                  <Chip
+                    key={weekday}
+                    label={label}
+                    selected={scheduledWeekdayOf(block.id) === weekday}
+                    onPress={() => handleSetDay(block, weekday)}
+                  />
+                ))}
+              </View>
             </View>
 
             <View style={styles.exerciseList}>
@@ -193,34 +202,37 @@ export default function RutinaScreen() {
                   style={({ pressed }) => pressed && styles.pressed}>
                   <Card padded={false} style={styles.exerciseRow}>
                     <View style={styles.flex}>
-                      <ThemedText type="default">{rbe.exercises?.name}</ThemedText>
+                      <ThemedText type="smallBold">{rbe.exercises?.name}</ThemedText>
                       <ThemedText type="small" themeColor="textSecondary">
                         {rbe.sets} × {rbe.reps} · {rbe.rest_seconds}s descanso
                       </ThemedText>
                     </View>
-                    <ThemedText type="small" themeColor="tint">
-                      Ver
-                    </ThemedText>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={theme.brandBright} />
                   </Card>
                 </Pressable>
               ))}
             </View>
 
             {completed ? (
-              <ThemedText type="smallBold" themeColor="success">
-                Completado hoy
-              </ThemedText>
+              <View style={[styles.done, { backgroundColor: `${theme.teal}1A`, borderColor: `${theme.teal}40` }]}>
+                <MaterialCommunityIcons name="check-circle" size={20} color={theme.teal} />
+                <ThemedText type="smallBold" themeColor="teal">
+                  Completado hoy
+                </ThemedText>
+              </View>
             ) : (
               <View style={styles.row}>
                 <Button
                   variant="secondary"
                   label="Marcar completo"
+                  icon="check"
                   onPress={() => markComplete(block)}
                   loading={savingId === block.id}
                   style={styles.flex}
                 />
                 <Button
                   label="Empezar"
+                  icon="play"
                   onPress={() =>
                     workout.start({ blockId: block.id, routineId: routine.id, label: block.name })
                   }
@@ -236,13 +248,35 @@ export default function RutinaScreen() {
 }
 
 const styles = StyleSheet.create({
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.one },
-  weekDay: { fontWeight: 700 },
+  loader: { marginTop: Spacing.five },
+  titleBlock: { gap: Spacing.one },
+  group: { gap: Spacing.md },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  weekDay: { fontWeight: '700' },
   helper: { textAlign: 'center' },
   blockCard: { gap: Spacing.three },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
   exerciseList: { gap: Spacing.two },
-  exerciseRow: { padding: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  exerciseRow: {
+    padding: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.md,
+  },
+  done: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   pressed: { opacity: 0.7 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: Spacing.two },

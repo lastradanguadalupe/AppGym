@@ -1,12 +1,16 @@
-import { Image } from 'expo-image';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { gradientStyle } from '@/constants/theme';
+
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
+
+const MARK_GRADIENT = 'linear-gradient(180deg, #2D8CFF, #0D2B50)';
 
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
@@ -33,7 +37,7 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  const image = <BrandMark />;
 
   return animate ? (
     <Animated.View
@@ -69,78 +73,41 @@ const keyframe = new Keyframe({
   },
 });
 
-const logoKeyframe = new Keyframe({
-  0: {
-    transform: [{ scale: 1.3 }],
-    opacity: 0,
-  },
-  40: {
-    transform: [{ scale: 1.3 }],
-    opacity: 0,
-    easing: Easing.elastic(0.7),
-  },
-  100: {
-    opacity: 1,
-    transform: [{ scale: 1 }],
-    easing: Easing.elastic(0.7),
-  },
-});
-
-const glowKeyframe = new Keyframe({
-  0: {
-    transform: [{ rotateZ: '0deg' }],
-  },
-  100: {
-    transform: [{ rotateZ: '7200deg' }],
-  },
-});
-
-export function AnimatedIcon() {
+function BrandMark() {
   return (
-    <View style={styles.iconContainer}>
-      <Animated.View entering={glowKeyframe.duration(60 * 1000 * 4)} style={styles.glow}>
-        <Image style={styles.glow} source={require('@/assets/images/logo-glow.png')} />
-      </Animated.View>
-
-      <Animated.View entering={keyframe.duration(DURATION)} style={styles.background} />
-      <Animated.View style={styles.imageContainer} entering={logoKeyframe.duration(DURATION)}>
-        <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />
-      </Animated.View>
+    <View style={styles.mark}>
+      <MaterialCommunityIcons name="dumbbell" size={44} color="#FFFFFF" />
     </View>
   );
 }
 
+export function AnimatedIcon() {
+  return (
+    <Animated.View entering={keyframe.duration(DURATION)} style={styles.background} />
+  );
+}
+
 const styles = StyleSheet.create({
-  imageContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  glow: {
-    width: 201,
-    height: 201,
-    position: 'absolute',
-  },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  mark: {
     width: 128,
     height: 128,
-    zIndex: 100,
-  },
-  image: {
-    width: 76,
-    height: 71,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#07172E',
+    ...gradientStyle(MARK_GRADIENT),
   },
   background: {
     borderRadius: 40,
-    experimental_backgroundImage: `linear-gradient(180deg, #3C9FFE, #0274DF)`,
+    backgroundColor: '#07172E',
+    ...gradientStyle(MARK_GRADIENT),
     width: 128,
     height: 128,
     position: 'absolute',
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor: '#07172E',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,

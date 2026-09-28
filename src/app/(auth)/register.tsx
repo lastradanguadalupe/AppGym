@@ -1,24 +1,34 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 
+import { AuthDivider, AuthHeader } from '@/components/auth-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
 import { Field } from '@/components/ui/field';
+import { GoogleButton } from '@/components/ui/google-button';
 import { Screen } from '@/components/ui/screen';
 import { ThemedText } from '@/components/themed-text';
+import { signInWithGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
 
-type RoleOption = 'cliente' | 'profe';
+function friendlyAuthError(message: string): string {
+  if (/rate limit/i.test(message)) {
+    return 'Demasiados registros en poco tiempo. Esperá unos minutos y volvé a intentar.';
+  }
+  if (/email suggestions|already registered|usuario ya/i.test(message)) {
+    return 'Ya existe una cuenta con ese email. Probá ingresar o usá otro email.';
+  }
+  return message;
+}
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<RoleOption>('cliente');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleRegister() {
@@ -29,52 +39,59 @@ export default function RegisterScreen() {
     setLoading(true);
     setError(null);
 
+    // Sin `role` en el metadata a propósito: el trigger de Supabase decide el rol
+    // desde la allow-list, así que desde acá nadie puede pedir ser profe.
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: name.trim(), role } },
+      options: {
+        data: { full_name: name.trim() },
+      },
     });
 
     if (error) {
       setLoading(false);
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
       return;
     }
+
+    setLoading(false);
 
     if (data.session) {
       return;
     }
 
-    const confirm = await supabase.auth.signInWithPassword({ email: email.trim(), password }).catch(() => null);
-    setLoading(false);
-    if (confirm?.error) {
-      setError(
-        'Te enviamos un mail de confirmación. Revisá tu casilla (y spam) para activar la cuenta.'
-      );
-    }
     Alert.alert(
-      'Cuenta creada',
-      'Revisá tu email para confirmar la cuenta antes de ingresar.'
+      'Revisá tu email',
+      'Te enviamos un mail de confirmación. Activá la cuenta y después ingresá.'
     );
+    setError('Te enviamos un mail de confirmación. Revisá tu casilla (y spam).');
+  }
+
+  async function handleGoogle() {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      console.warn('Error con Google', e);
+      setError('No se pudo iniciar sesión con Google. Probá de nuevo.');
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Creá tu cuenta</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {role === 'cliente'
-          ? 'Vas a completar tus datos para que tu profe arme tu rutina.'
-          : 'Registrate como profe para gestionar tus alumnos.'}
-      </ThemedText>
+      <AuthHeader
+        title="Creá tu cuenta"
+        subtitle="Empezá a entrenar: tu profe va a armarte una rutina a medida."
+      />
 
       <Card>
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          ¿Qué rol tenés?
-        </ThemedText>
-        <View style={styles.roleRow}>
-          <Chip label="Soy alumno" selected={role === 'cliente'} onPress={() => setRole('cliente')} />
-          <Chip label="Soy profe" selected={role === 'profe'} onPress={() => setRole('profe')} />
-        </View>
+        <GoogleButton onPress={handleGoogle} loading={googleLoading} />
+
+        <AuthDivider />
 
         <Field
           label="Nombre"
@@ -96,20 +113,29 @@ export default function RegisterScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          autoComplete="new-password"
           placeholder="Mínimo 6 caracteres"
         />
+
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label="Registrarme" onPress={handleRegister} loading={loading} />
+        <Button
+          label="Crear cuenta"
+          icon="account-plus-outline"
+          onPress={handleRegister}
+          loading={loading}
+        />
       </Card>
 
       <ThemedText type="small" style={styles.footer}>
         <Link href="/login">¿Ya tenés cuenta? Ingresá</Link>
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
+        <Link href="/profe">¿Sos entrenador? Entrá por acá</Link>
       </ThemedText>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  roleRow: { flexDirection: 'row', gap: Spacing.two },
   footer: { textAlign: 'center', marginTop: Spacing.two },
 });

@@ -63,7 +63,10 @@ export default function OnboardingScreen() {
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Contanos un poco sobre vos</ThemedText>
+      <ThemedText type="eyebrow" themeColor="brandBright">
+        Primer paso
+      </ThemedText>
+      <ThemedText type="display">Contanos un poco sobre vos</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         Esta información es para que tu profe arme la rutina que mejor se adapte a tu cuerpo y tus
         objetivos. La podés modificar cuando quieras.
@@ -118,28 +121,31 @@ export default function OnboardingScreen() {
           placeholder="Ej: rodilla, hombro... (si ninguna, dejalo vacío)"
         />
 
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          Nivel de experiencia
-        </ThemedText>
-        <View style={styles.row}>
-          {EXPERIENCIAS.map((exp) => (
-            <Chip
-              key={exp.value}
-              label={exp.label}
-              selected={experiencia === exp.value}
-              onPress={() => setExperiencia(exp.value)}
-            />
-          ))}
+        <View style={styles.group}>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            Nivel de experiencia
+          </ThemedText>
+          <View style={styles.row}>
+            {EXPERIENCIAS.map((exp) => (
+              <Chip
+                key={exp.value}
+                label={exp.label}
+                selected={experiencia === exp.value}
+                onPress={() => setExperiencia(exp.value)}
+              />
+            ))}
+          </View>
         </View>
 
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label="Guardar y empezar" onPress={handleSave} loading={saving} />
+        <Button label="Guardar y empezar" icon="arrow-right" onPress={handleSave} loading={saving} />
       </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  group: { gap: Spacing.md, paddingTop: Spacing.one },
   row: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
   half: { flex: 1, minWidth: 120 },
 });

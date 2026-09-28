@@ -1,5 +1,13 @@
 import type { Session } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { fetchClientDetails, fetchProfile } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +18,7 @@ type SessionContextValue = {
   profile: Profile | null;
   clientDetails: ClientDetails | null;
   loading: boolean;
+  profileLoading: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -21,26 +30,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [clientDetails, setClientDetails] = useState<ClientDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const loadIdRef = useRef(0);
 
   async function loadProfile(uid: string | undefined | null) {
+    const loadId = ++loadIdRef.current;
+    const isCurrent = () => loadIdRef.current === loadId;
+
     if (!uid) {
       setProfile(null);
       setClientDetails(null);
+      setProfileLoading(false);
       return;
     }
+
+    setProfileLoading(true);
     try {
       const p = await fetchProfile(uid);
+      if (!isCurrent()) return;
       setProfile(p);
       if (p.role === 'cliente') {
         const details = await fetchClientDetails(uid);
+        if (!isCurrent()) return;
         setClientDetails(details);
       } else {
         setClientDetails(null);
       }
     } catch (e) {
+      if (!isCurrent()) return;
       console.warn('Error cargando perfil', e);
       setProfile(null);
       setClientDetails(null);
+    } finally {
+      if (isCurrent()) setProfileLoading(false);
     }
   }
 
@@ -51,10 +73,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(data.session);
       if (data.session) {
-        loadProfile(data.session.user.id).finally(() => setLoading(false));
+        loadProfile(data.session.user.id);
       } else {
-        setLoading(false);
+        setProfile(null);
+        setClientDetails(null);
+        setProfileLoading(false);
       }
+      setLoading(false);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -64,6 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
         setClientDetails(null);
+        setProfileLoading(false);
       }
     });
 
@@ -79,6 +105,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       profile,
       clientDetails,
       loading,
+      profileLoading,
       refreshProfile: async () => {
         await loadProfile(session?.user?.id);
       },
@@ -86,9 +113,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
         setProfile(null);
         setClientDetails(null);
+        setProfileLoading(false);
       },
     }),
-    [session, profile, clientDetails, loading]
+    [session, profile, clientDetails, loading, profileLoading]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

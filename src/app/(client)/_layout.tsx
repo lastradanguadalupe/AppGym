@@ -1,34 +1,50 @@
+import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { ShadowColor } from '@/constants/theme';
+import { useSession } from '@/context/session';
 import { WorkoutProvider } from '@/context/workout';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function ClientLayout() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
+  const { profile } = useSession();
+
+  // Un profe no tiene tabs de alumno: lo mandamos a su panel.
+  if (profile?.role === 'profe') {
+    return <Redirect href="/panel" />;
+  }
 
   return (
     <WorkoutProvider>
       <NativeTabs
-        backgroundColor={colors.background}
-        indicatorColor={colors.tint}
-        labelStyle={{ selected: { color: colors.tint } }}>
+        backgroundColor={theme.background}
+        tintColor={theme.brand}
+        iconColor={theme.textSecondary}
+        indicatorColor={theme.brand}
+        rippleColor={theme.brandSurfaceAlt}
+        shadowColor={ShadowColor}
+        disableTransparentOnScrollEdge
+        tabBarRespectsIMEInsets
+        labelStyle={{
+          selected: { color: theme.brand, fontWeight: '700' },
+          default: { color: theme.textSecondary, fontWeight: '600' },
+        }}>
         <NativeTabs.Trigger name="index">
           <NativeTabs.Trigger.Label>Inicio</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+          <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="rutina">
           <NativeTabs.Trigger.Label>Rutina</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="dumbbell.fill" md="fitness_center" />
+          <NativeTabs.Trigger.Icon sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }} md="fitness_center" />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="historial">
           <NativeTabs.Trigger.Label>Historial</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="clock.fill" md="history" />
+          <NativeTabs.Trigger.Icon sf={{ default: 'clock', selected: 'clock.fill' }} md="history" />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="perfil">
           <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="person.fill" md="person" />
+          <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} md="person" />
         </NativeTabs.Trigger>
       </NativeTabs>
     </WorkoutProvider>

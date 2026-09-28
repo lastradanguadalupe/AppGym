@@ -1,3 +1,4 @@
+import { Redirect, type Href } from 'expo-router';
 import {
   TabList,
   TabSlot,
@@ -7,36 +8,48 @@ import {
   type TabTriggerSlotProps,
 } from 'expo-router/ui';
 import { SymbolView } from 'expo-symbols';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Colors, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaxContentWidth, Radius, Shadows, Spacing } from '@/constants/theme';
+import { useSession } from '@/context/session';
+import { TabBarHeightProvider } from '@/context/tab-bar';
 import { WorkoutProvider } from '@/context/workout';
+import { useTheme } from '@/hooks/use-theme';
 
-const TABS: { name: string; href: string; label: string; icon: string }[] = [
-  { name: 'index', href: '/', label: 'Inicio', icon: 'house' },
-  { name: 'rutina', href: '/rutina', label: 'Rutina', icon: 'fitness_center' },
-  { name: 'historial', href: '/historial', label: 'Historial', icon: 'history' },
-  { name: 'perfil', href: '/perfil', label: 'Perfil', icon: 'person' },
+const TABS: { name: string; href: Href; label: string; icon: string }[] = [
+  { name: 'index', href: '/', label: 'Inicio', icon: 'house.fill' },
+  { name: 'rutina', href: '/rutina', label: 'Rutina', icon: 'dumbbell.fill' },
+  { name: 'historial', href: '/historial', label: 'Historial', icon: 'clock.fill' },
+  { name: 'perfil', href: '/perfil', label: 'Perfil', icon: 'person.fill' },
 ];
 
 export default function ClientWebLayout() {
+  const [tabBarHeight, setTabBarHeight] = useState(0);
+  const { profile } = useSession();
+
+  // Un profe no tiene tabs de alumno: lo mandamos a su panel.
+  if (profile?.role === 'profe') {
+    return <Redirect href="/panel" />;
+  }
+
   return (
     <WorkoutProvider>
-      <Tabs>
-        <TabSlot style={styles.slot} />
-        <TabList asChild>
-          <CustomTabList>
-            {TABS.map((tab) => (
-              <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
-                <TabButton label={tab.label} icon={tab.icon} />
-              </TabTrigger>
-            ))}
-          </CustomTabList>
-        </TabList>
-      </Tabs>
+      <TabBarHeightProvider height={tabBarHeight}>
+        <Tabs>
+          <TabSlot style={styles.slot} />
+          <TabList asChild>
+            <CustomTabList onHeight={setTabBarHeight}>
+              {TABS.map((tab) => (
+                <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
+                  <TabButton label={tab.label} icon={tab.icon} />
+                </TabTrigger>
+              ))}
+            </CustomTabList>
+          </TabList>
+        </Tabs>
+      </TabBarHeightProvider>
     </WorkoutProvider>
   );
 }
@@ -47,31 +60,50 @@ function TabButton({
   isFocused,
   ...props
 }: TabTriggerSlotProps & { label: string; icon: string }) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
 
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <SymbolView tintColor={colors.text} name={icon as never} size={16} />
-        <ThemedText
-          type="small"
-          themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {label}
-        </ThemedText>
-      </ThemedView>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [
+        styles.tabButtonView,
+        isFocused && { backgroundColor: theme.brand },
+        pressed && styles.pressed,
+      ]}>
+      <SymbolView
+        tintColor={isFocused ? theme.tintText : theme.textSecondary}
+        name={icon as never}
+        size={18}
+      />
+      <ThemedText
+        type="small"
+        themeColor={isFocused ? 'tintText' : 'textSecondary'}
+        style={isFocused ? styles.focusedLabel : undefined}>
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
 
-function CustomTabList(props: TabListProps) {
+function CustomTabList({
+  onHeight,
+  ...props
+}: TabListProps & { onHeight: (height: number) => void }) {
+  const theme = useTheme();
+
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
+    <View
+      {...props}
+      onLayout={(e) => onHeight(e.nativeEvent.layout.height)}
+      style={styles.tabListContainer}>
+      <View
+        style={[
+          styles.innerContainer,
+          { backgroundColor: theme.brandSurface, borderColor: theme.border },
+          Shadows.raised,
+        ]}>
         {props.children}
-      </ThemedView>
+      </View>
     </View>
   );
 }
@@ -82,28 +114,29 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    paddingVertical: BottomTabInset,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.three,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
   },
   innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Spacing.five,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    maxWidth: MaxContentWidth,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
+    padding: Spacing.one,
+    borderRadius: Radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+    maxWidth: MaxContentWidth,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  pressed: { opacity: 0.7 },
+  tabButtonView: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  focusedLabel: { fontWeight: '700' },
+  pressed: { opacity: 0.75 },
 });

@@ -4,10 +4,11 @@ import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, StatCard } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty';
 import { Field } from '@/components/ui/field';
+import { IconAction } from '@/components/ui/icon-action';
 import { Screen } from '@/components/ui/screen';
 import { useSession } from '@/context/session';
 import {
@@ -28,6 +29,7 @@ import {
 } from '@/lib/db';
 import { computeEdad, experienciaLabel, formatDateTime, formatMinutes, regionLabel } from '@/lib/format';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type {
   ClientDetails,
   Exercise,
@@ -45,8 +47,20 @@ const REGIONS: { value: Region; label: string }[] = [
   { value: 'full', label: 'Cuerpo completo' },
 ];
 
+function Meta({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <View style={wide ? styles.metaWide : styles.meta}>
+      <ThemedText type="eyebrow" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+      <ThemedText type="small">{value}</ThemedText>
+    </View>
+  );
+}
+
 export default function AdminAlumnoScreen() {
   const params = useLocalSearchParams<{ id: string }>();
+  const theme = useTheme();
   const { profile: me } = useSession();
   const userId = params.id ?? '';
 
@@ -233,7 +247,7 @@ export default function AdminAlumnoScreen() {
   if (loading) {
     return (
       <Screen>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.brandBright} style={styles.loader} />
       </Screen>
     );
   }
@@ -241,7 +255,11 @@ export default function AdminAlumnoScreen() {
   if (!client) {
     return (
       <Screen>
-        <EmptyState title="Alumno no encontrado" />
+        <EmptyState
+          icon="account-search-outline"
+          title="Alumno no encontrado"
+          subtitle="Volvé al listado y elegí un alumno."
+        />
       </Screen>
     );
   }
@@ -251,50 +269,53 @@ export default function AdminAlumnoScreen() {
   return (
     <Screen>
       {/* Datos del alumno */}
-      <Card>
-        <ThemedText type="subtitle">{client.name ?? client.email}</ThemedText>
+      <View style={styles.header}>
+        <ThemedText type="eyebrow" themeColor="brandBright">
+          Ficha del alumno
+        </ThemedText>
+        <ThemedText type="display">{client.name ?? client.email}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {client.email}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {edad != null ? `Edad: ${edad} años · ` : ''}
-          Altura: {details?.altura_cm ?? '—'} cm · Peso: {details?.peso_kg ?? '—'} kg
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Nivel: {experienciaLabel(details?.experiencia ?? null)} · Objetivo:{' '}
-          {details?.objetivo ?? '—'}
-        </ThemedText>
+      </View>
+
+      <Card>
+        <View style={styles.metaGrid}>
+          <Meta label="Edad" value={edad != null ? `${edad} años` : '—'} />
+          <Meta label="Altura" value={details?.altura_cm != null ? `${details.altura_cm} cm` : '—'} />
+          <Meta label="Peso" value={details?.peso_kg != null ? `${details.peso_kg} kg` : '—'} />
+          <Meta label="Nivel" value={experienciaLabel(details?.experiencia ?? null)} />
+        </View>
+        <View style={styles.metaGrid}>
+          <Meta label="Objetivo" value={details?.objetivo ?? '—'} wide />
+        </View>
         {details?.enfermedades?.length ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            Enfermedades: {details.enfermedades.join(', ')}
-          </ThemedText>
+          <Meta label="Enfermedades" value={details.enfermedades.join(', ')} wide />
         ) : null}
         {details?.lesiones?.length ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            Lesiones: {details.lesiones.join(', ')}
-          </ThemedText>
+          <Meta label="Lesiones" value={details.lesiones.join(', ')} wide />
         ) : null}
       </Card>
 
       {/* Avance */}
       <Card>
-        <ThemedText type="smallBold" themeColor="tint">
+        <ThemedText type="eyebrow" themeColor="textSecondary">
           Avance
         </ThemedText>
         <View style={styles.statsRow}>
           <View style={styles.flex}>
-            <ThemedText type="title">{sessions.length}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Entrenamientos
-            </ThemedText>
+            <StatCard
+              icon="calendar-check-outline"
+              value={String(sessions.length)}
+              label="Entrenamientos"
+            />
           </View>
           <View style={styles.flex}>
-            <ThemedText type="title">
-              {formatMinutes(sessions.reduce((acc, s) => acc + (s.duration_minutes ?? 0), 0))}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Tiempo total
-            </ThemedText>
+            <StatCard
+              icon="timer-outline"
+              value={formatMinutes(sessions.reduce((acc, s) => acc + (s.duration_minutes ?? 0), 0))}
+              label="Tiempo total"
+            />
           </View>
         </View>
         {sessions.slice(0, 5).map((s) => (
@@ -306,7 +327,9 @@ export default function AdminAlumnoScreen() {
       </Card>
 
       {/* Rutina */}
-      <ThemedText type="subtitle">Rutina</ThemedText>
+      <ThemedText type="eyebrow" themeColor="textSecondary">
+        Rutina
+      </ThemedText>
 
       {!routine ? (
         <Card>
@@ -321,14 +344,19 @@ export default function AdminAlumnoScreen() {
         <Card>
           <View style={styles.headerRow}>
             <View style={styles.flex}>
-              <ThemedText type="subtitle">{routine.title}</ThemedText>
+              <ThemedText type="default">{routine.title}</ThemedText>
               {routine.description ? (
                 <ThemedText type="small" themeColor="textSecondary">
                   {routine.description}
                 </ThemedText>
               ) : null}
             </View>
-            <Button variant="danger" label="Quitar" onPress={handleDeleteRoutine} />
+            <IconAction
+              icon="trash-can-outline"
+              label="Quitar rutina"
+              color={theme.danger}
+              onPress={handleDeleteRoutine}
+            />
           </View>
 
           <ThemedText type="smallBold" themeColor="textSecondary">
@@ -336,15 +364,20 @@ export default function AdminAlumnoScreen() {
           </ThemedText>
 
           {routine.routine_blocks.map((block, index) => (
-            <Card key={block.id} style={styles.blockBox}>
+            <Card key={block.id} style={styles.blockBox} tone="flat">
               <View style={styles.headerRow}>
                 <View style={styles.flex}>
-                  <ThemedText type="smallBold" themeColor="tint">
+                  <ThemedText type="smallBold" themeColor="brandBright">
                     Bloque {index + 1} · {regionLabel(block.region)}
                   </ThemedText>
                   <ThemedText type="default">{block.name}</ThemedText>
                 </View>
-                <Button variant="danger" label="Eliminar" onPress={() => handleDeleteBlock(block.id)} />
+                <IconAction
+                  icon="trash-can-outline"
+                  label="Eliminar bloque"
+                  color={theme.danger}
+                  onPress={() => handleDeleteBlock(block.id)}
+                />
               </View>
 
               {block.routine_block_exercises.map((rbe) => (
@@ -358,28 +391,31 @@ export default function AdminAlumnoScreen() {
                       </ThemedText>
                     </View>
                     {editingRbe === rbe.id ? (
-                      <ThemedText type="small" themeColor="tint" onPress={() => setEditingRbe(null)}>
-                        Cerrar
-                      </ThemedText>
+                      <IconAction
+                        icon="close"
+                        label="Cerrar"
+                        color={theme.textSecondary}
+                        onPress={() => setEditingRbe(null)}
+                      />
                     ) : (
                       <>
-                        <ThemedText
-                          type="small"
-                          themeColor="tint"
-                          onPress={() => openEditRbe(rbe)}>
-                          Editar
-                        </ThemedText>
-                        <ThemedText
-                          type="small"
-                          themeColor="danger"
+                        <IconAction
+                          icon="pencil-outline"
+                          label="Editar"
+                          color={theme.brandBright}
+                          onPress={() => openEditRbe(rbe)}
+                        />
+                        <IconAction
+                          icon="trash-can-outline"
+                          label="Quitar"
+                          color={theme.danger}
                           onPress={() =>
                             Alert.alert(rbe.exercises?.name ?? 'Ejercicio', '¿Quitar este ejercicio?', [
                               { text: 'Cancelar', style: 'cancel' },
                               { text: 'Quitar', style: 'destructive', onPress: () => handleDeleteExercise(rbe.id) },
                             ])
-                          }>
-                          Quitar
-                        </ThemedText>
+                          }
+                        />
                       </>
                     )}
                   </View>
@@ -387,11 +423,23 @@ export default function AdminAlumnoScreen() {
                   {editingRbe === rbe.id ? (
                     <View style={styles.editBox}>
                       <View style={styles.rowThree}>
-                        <Field label="Series" value={editSets} onChangeText={setEditSets} keyboardType="number-pad" />
-                        <Field label="Reps" value={editReps} onChangeText={setEditReps} placeholder="10-12" />
-                        <Field label="Descanso (s)" value={editRest} onChangeText={setEditRest} keyboardType="number-pad" />
+                        <View style={styles.flex}>
+                          <Field label="Series" value={editSets} onChangeText={setEditSets} keyboardType="number-pad" />
+                        </View>
+                        <View style={styles.flex}>
+                          <Field label="Reps" value={editReps} onChangeText={setEditReps} placeholder="10-12" />
+                        </View>
+                        <View style={styles.flex}>
+                          <Field label="Descanso (s)" value={editRest} onChangeText={setEditRest} keyboardType="number-pad" />
+                        </View>
                       </View>
-                      <Button variant="outline" label="Guardar" disabled={busy} onPress={() => handleSaveRbe(rbe)} />
+                      <Button
+                        variant="outline"
+                        label="Guardar"
+                        icon="content-save-outline"
+                        disabled={busy}
+                        onPress={() => handleSaveRbe(rbe)}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -472,6 +520,11 @@ export default function AdminAlumnoScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { marginTop: Spacing.five },
+  header: { gap: Spacing.one },
+  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
+  meta: { minWidth: 90, gap: 2 },
+  metaWide: { width: '100%', gap: 2 },
   statsRow: { flexDirection: 'row', gap: Spacing.two, paddingVertical: Spacing.two },
   flex: { flex: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },

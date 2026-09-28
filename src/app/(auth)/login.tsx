@@ -2,11 +2,14 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet } from 'react-native';
 
+import { AuthDivider, AuthHeader } from '@/components/auth-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
+import { GoogleButton } from '@/components/ui/google-button';
 import { Screen } from '@/components/ui/screen';
 import { ThemedText } from '@/components/themed-text';
+import { signInWithGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
 
@@ -14,6 +17,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
@@ -31,14 +35,31 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleGoogle() {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      console.warn('Error con Google', e);
+      setError('No se pudo iniciar sesión con Google. Probá de nuevo.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
   return (
     <Screen>
-      <ThemedText type="subtitle">Bienvenido de nuevo</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        Ingresá para ver tu rutina y registrar tus entrenamientos.
-      </ThemedText>
+      <AuthHeader
+        title="Bienvenido de nuevo"
+        subtitle="Ingresá para ver tu rutina y registrar tus entrenamientos."
+      />
 
       <Card>
+        <GoogleButton onPress={handleGoogle} loading={googleLoading} />
+
+        <AuthDivider />
+
         <Field
           label="Email"
           value={email}
@@ -53,14 +74,18 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          autoComplete="current-password"
           placeholder="••••••••"
         />
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label="Ingresar" onPress={handleLogin} loading={loading} />
+        <Button label="Ingresar" icon="login" onPress={handleLogin} loading={loading} />
       </Card>
 
       <ThemedText type="small" style={styles.footer}>
         <Link href="/register">¿Todavía no tenés cuenta? Registrate</Link>
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
+        <Link href="/profe">¿Sos entrenador? Acceso de staff</Link>
       </ThemedText>
     </Screen>
   );

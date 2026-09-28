@@ -1,39 +1,48 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * Marca AppGym — modo oscuro.
+ * Rampa de superficies: `background` (noche) < `backgroundElement` (profundo) <
+ * `brandSurface` (azul de marca). El texto es blanco o celeste; el azul
+ * eléctrico se reserva para acciones y el teal para progreso y estados positivos.
+ * Reparto aproximado: 70 % azul noche, 20 % azul eléctrico, 10 % teal.
+ */
+const dark = {
+  // Marca
+  brand: '#2D8CFF',
+  brandBright: '#6BA8FF',
+  brandDeep: '#0D2B50',
+  brandSurface: '#102C55',
+  brandSurfaceAlt: '#173A6B',
+
+  // Semánticos
+  text: '#FFFFFF',
+  textSecondary: '#A9BED8',
+  muted: '#8098B8',
+  background: '#07172E',
+  backgroundElement: '#0D2B50',
+  backgroundSelected: '#143459',
+  border: '#1C3E6B',
+  borderStrong: 'rgba(45, 140, 255, 0.55)',
+  tint: '#2D8CFF',
+  tintText: '#07172E',
+  teal: '#16CDBA',
+  success: '#16CDBA',
+  onSuccess: '#04231F',
+  danger: '#FF5A6E',
+  onDanger: '#2A0510',
+  warning: '#FFB547',
+  overlay: 'rgba(3, 10, 22, 0.72)',
+} as const;
+
+/** La app es de tema oscuro único: `light` es un alias para que `ThemeColor` siga siendo válido. */
+const light = dark;
+
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-    tint: '#1E7FF0',
-    tintText: '#ffffff',
-    success: '#1F9D57',
-    onSuccess: '#ffffff',
-    danger: '#D93B45',
-    onDanger: '#ffffff',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-    tint: '#4DA3FF',
-    tintText: '#0B1220',
-    success: '#3BDC84',
-    onSuccess: '#06280F',
-    danger: '#FF6B70',
-    onDanger: '#2B0406',
-  },
+  light,
+  dark: light,
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
@@ -67,11 +76,70 @@ export const Spacing = {
   half: 2,
   one: 4,
   two: 8,
+  md: 12,
   three: 16,
   four: 24,
   five: 32,
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+export const Radius = {
+  sm: 10,
+  md: 14,
+  lg: 20,
+  xl: 28,
+  pill: 999,
+} as const;
+
+/** Color de las sombras: en fondo oscuro la profundidad la dan la sombra y el borde fino. */
+export const ShadowColor = '#020A16';
+
+/** Sombras discretas: en fondo oscuro la profundidad la dan la sombra y el borde fino. */
+export const Shadows = {
+  card: Platform.select({
+    ios: {
+      shadowColor: ShadowColor,
+      shadowOpacity: 0.45,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+    },
+    android: { elevation: 3 },
+    default: {
+      boxShadow: '0 10px 28px rgba(2, 10, 22, 0.55)',
+    },
+  }),
+  raised: Platform.select({
+    ios: {
+      shadowColor: ShadowColor,
+      shadowOpacity: 0.6,
+      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 14 },
+    },
+    android: { elevation: 8 },
+    default: {
+      boxShadow: '0 14px 36px rgba(2, 10, 22, 0.65)',
+    },
+  }),
+} as const;
+
+/** Degradados de marca. `experimental_backgroundImage` requiere RN 0.76+. */
+export const Gradients = {
+  hero: 'linear-gradient(155deg, #0A2A54 0%, #0E3C78 50%, #14529E 100%)',
+  accent: 'linear-gradient(135deg, #2D8CFF 0%, #1D6FE0 100%)',
+  deep: 'linear-gradient(160deg, #05122A 0%, #0D2B50 100%)',
+} as const;
+
+/**
+ * Aplica un degradado de `Gradients` como estilo de View/Pressable.
+ * En native va como `experimental_backgroundImage`; en web react-native-web
+ * solo entiende `backgroundImage`, así que el alias experimental se pierde y
+ * el View queda transparente. Usar SIEMPRE junto a un `backgroundColor` sólido
+ * de respaldo para que el contenido claro nunca quede ilegible.
+ */
+export function gradientStyle(gradient: string) {
+  return Platform.OS === 'web'
+    ? { backgroundImage: gradient }
+    : { experimental_backgroundImage: gradient };
+}
+
 export const MaxContentWidth = 800;

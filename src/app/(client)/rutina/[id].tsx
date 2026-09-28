@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -11,7 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { useSession } from '@/context/session';
 import { fetchActiveRoutineForClient, fetchExercise } from '@/lib/db';
 import { regionLabel } from '@/lib/format';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Exercise } from '@/types';
 
@@ -58,7 +59,7 @@ export default function ExerciseDetailScreen() {
   if (loading) {
     return (
       <Screen>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.brandBright} style={styles.loader} />
       </Screen>
     );
   }
@@ -66,7 +67,7 @@ export default function ExerciseDetailScreen() {
   if (!exercise) {
     return (
       <Screen>
-        <ThemedText type="subtitle">Ejercicio no encontrado</ThemedText>
+        <ThemedText type="display">Ejercicio no encontrado</ThemedText>
       </Screen>
     );
   }
@@ -99,16 +100,18 @@ export default function ExerciseDetailScreen() {
       </View>
 
       {context ? (
-        <Card>
-          <ThemedText type="smallBold" themeColor="textSecondary">
+        <Card tone="brand">
+          <ThemedText type="eyebrow" themeColor="brandBright">
             Parámetros en tu rutina
           </ThemedText>
-          <ThemedText type="default">{context}</ThemedText>
+          <ThemedText type="default" themeColor="text">
+            {context}
+          </ThemedText>
         </Card>
       ) : null}
 
       <Card>
-        <ThemedText type="smallBold" themeColor="textSecondary">
+        <ThemedText type="eyebrow" themeColor="textSecondary">
           Cómo hacerlo
         </ThemedText>
         <ThemedText type="default">
@@ -118,8 +121,13 @@ export default function ExerciseDetailScreen() {
 
       {exercise.video_url ? (
         <Pressable onPress={() => Linking.openURL(exercise.video_url!)}>
-          <Card style={styles.videoCard}>
-            <ThemedText type="linkPrimary">Ver video de referencia</ThemedText>
+          <Card style={styles.videoCard} tone="brand">
+            <View style={styles.videoRow}>
+              <MaterialCommunityIcons name="play-circle-outline" size={22} color={theme.brandBright} />
+              <ThemedText type="smallBold" themeColor="brandBright">
+                Ver video de referencia
+              </ThemedText>
+            </View>
           </Card>
         </Pressable>
       ) : null}
@@ -128,14 +136,16 @@ export default function ExerciseDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { marginTop: Spacing.five },
   image: {
     width: '100%',
     aspectRatio: 4 / 3,
-    borderRadius: Spacing.four,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.two,
   },
-  chipsRow: { flexDirection: 'row', gap: Spacing.two },
+  chipsRow: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
   videoCard: { alignItems: 'center' },
+  videoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
 });
